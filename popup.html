@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>API Tester</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="request-section">
+            <div class="url-section">
+                <select id="method">
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                    <option value="PATCH">PATCH</option>
+                </select>
+                <input type="text" id="url" placeholder="Enter URL" />
+                <button id="send">Send</button>
+                <button id="generate-code">Generate Code</button>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-button active" data-tab="params">Params</button>
+                <button class="tab-button" data-tab="headers">Headers</button>
+                <button class="tab-button" data-tab="body">Body</button>
+            </div>
+
+            <div class="tab-content">
+                <div id="params" class="tab-pane active">
+                    <div class="params-container">
+                        <div class="param-row">
+                            <input type="text" placeholder="Key" class="param-key" />
+                            <input type="text" placeholder="Value" class="param-value" />
+                            <button class="add-param">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="headers" class="tab-pane">
+                    <div class="headers-container">
+                        <div class="header-row">
+                            <input type="text" placeholder="Key" class="header-key" />
+                            <input type="text" placeholder="Value" class="header-value" />
+                            <button class="add-header">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="body" class="tab-pane">
+                    <textarea id="request-body" placeholder="Enter request body (JSON)"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="response-section">
+            <div class="response-info">
+                <span id="status"></span>
+                <span id="time"></span>
+            </div>
+            <div class="response-tabs">
+                <button class="tab-button active" data-tab="response">Response</button>
+                <button class="tab-button" data-tab="headers-response">Headers</button>
+            </div>
+            <div class="response-content">
+                <pre id="response-data"></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code Generation Modal -->
+    <div id="code-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Generated Code</h2>
+                <button class="close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="language-selector">
+                    <button class="language-btn active" data-lang="javascript">JavaScript</button>
+                    <button class="language-btn" data-lang="python">Python</button>
+                </div>
+                <div class="code-container">
+                    <pre id="generated-code"></pre>
+                    <button id="copy-code">Copy Code</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
