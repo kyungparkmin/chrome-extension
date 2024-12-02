@@ -166,32 +166,157 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // History functionality
+    const historyList = document.querySelector('.history-list');
+    const clearHistoryBtn = document.getElementById('clear-history');
+
+    // Load history
+    function loadHistory() {
+        chrome.storage.local.get(['requestHistory'], (result) => {
+            const history = result.requestHistory || [];
+            historyList.innerHTML = '';
+            
+            history.forEach((item) => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                
+                const time = new Date(item.timestamp);
+                const timeString = time.toLocaleString();
+                
+                historyItem.innerHTML = `
+                    <div class="history-item-header">
+                        <span class="history-method ${item.method.toLowerCase()}">${item.method}</span>
+                        <span class="history-time">${timeString}</span>
+                    </div>
+                    <div class="history-url">${item.url}</div>
+                    <div class="history-status ${item.status >= 200 && item.status < 300 ? 'success' : 'error'}">
+                        Status: ${item.status} (${item.responseTime}ms)
+                    </div>
+                `;
+                
+                // Click event to restore request
+                historyItem.addEventListener('click', () => {
+                    restoreRequest(item);
+                });
+                
+                historyList.insertBefore(historyItem, historyList.firstChild);
+            });
+        });
+    }
+
+    // Save request to history
+    function saveToHistory(request, response, responseTime) {
+        chrome.storage.local.get(['requestHistory'], (result) => {
+            const history = result.requestHistory || [];
+            
+            const historyItem = {
+                method: request.method,
+                url: request.url,
+                headers: request.headers,
+                body: request.body,
+                params: request.params,
+                status: response.status,
+                responseTime: responseTime,
+                timestamp: new Date().toISOString()
+            };
+            
+            history.unshift(historyItem);
+            
+            // Keep only last 50 requests
+            if (history.length > 50) {
+                history.pop();
+            }
+            
+            chrome.storage.local.set({ requestHistory: history }, () => {
+                loadHistory();
+            });
+        });
+    }
+
+    // Restore request from history
+    function restoreRequest(historyItem) {
+        // Restore method
+        methodSelect.value = historyItem.method;
+        
+        // Restore URL
+        urlInput.value = historyItem.url;
+        
+        // Restore headers
+        const headerContainer = document.querySelector('.headers-container');
+        headerContainer.innerHTML = '';
+        if (historyItem.headers) {
+            Object.entries(historyItem.headers).forEach(([key, value]) => {
+                const row = createHeaderRow(key, value);
+                headerContainer.appendChild(row);
+            });
+        }
+        headerContainer.appendChild(createHeaderRow()); // Add empty row
+        
+        // Restore params
+        const paramsContainer = document.querySelector('.params-container');
+        paramsContainer.innerHTML = '';
+        if (historyItem.params) {
+            Object.entries(historyItem.params).forEach(([key, value]) => {
+                const row = createParamRow(key, value);
+                paramsContainer.appendChild(row);
+            });
+        }
+        paramsContainer.appendChild(createParamRow()); // Add empty row
+        
+        // Restore body
+        requestBody.value = historyItem.body || '';
+        
+        // Save restored state
+        saveState();
+    }
+
+    // Clear history
+    clearHistoryBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to clear all request history?')) {
+            chrome.storage.local.set({ requestHistory: [] }, () => {
+                loadHistory();
+            });
+        }
+    });
+
+    // Load history on startup
+    loadHistory();
+
     // Send request handler
     sendButton.addEventListener('click', async () => {
         const startTime = performance.now();
         
+        // Collect request data
+        const request = {
+            method: methodSelect.value,
+            url: urlInput.value,
+            headers: {},
+            params: {},
+            body: requestBody.value
+        };
+
         // Collect headers
-        const headers = {};
         document.querySelectorAll('.header-row').forEach(row => {
             const key = row.querySelector('.header-key').value.trim();
             const value = row.querySelector('.header-value').value.trim();
             if (key && value) {
-                headers[key] = value;
+                request.headers[key] = value;
             }
         });
 
-        // Collect query parameters
+        // Collect params
         const params = new URLSearchParams();
         document.querySelectorAll('.param-row').forEach(row => {
             const key = row.querySelector('.param-key').value.trim();
             const value = row.querySelector('.param-value').value.trim();
             if (key && value) {
                 params.append(key, value);
+                request.params[key] = value;
             }
         });
 
-        // Prepare URL with query parameters
-        let finalUrl = urlInput.value;
+        // Add params to URL
+        let finalUrl = request.url;
         const queryString = params.toString();
         if (queryString) {
             finalUrl += (finalUrl.includes('?') ? '&' : '?') + queryString;
@@ -199,38 +324,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const response = await fetch(finalUrl, {
-                method: methodSelect.value,
-                headers: headers,
-                body: ['POST', 'PUT', 'PATCH'].includes(methodSelect.value) ? requestBody.value : null
+                method: request.method,
+                headers: request.headers,
+                body: ['POST', 'PUT', 'PATCH'].includes(request.method) ? request.body : null
             });
 
             const endTime = performance.now();
-            const timeTaken = Math.round(endTime - startTime);
+            const responseTime = Math.round(endTime - startTime);
 
             // Update status and time
             statusElement.textContent = `${response.status} ${response.statusText}`;
             statusElement.style.backgroundColor = response.ok ? '#4CAF50' : '#f44336';
-            timeElement.textContent = `${timeTaken}ms`;
+            timeElement.textContent = `${responseTime}ms`;
 
             // Display response
             const responseText = await response.text();
             try {
-                // Try to parse and format JSON response
                 const jsonResponse = JSON.parse(responseText);
                 responseData.textContent = JSON.stringify(jsonResponse, null, 2);
             } catch {
-                // If not JSON, display as plain text
                 responseData.textContent = responseText;
             }
 
             // Save to history
-            saveToHistory({
-                method: methodSelect.value,
-                url: finalUrl,
-                headers: headers,
-                body: requestBody.value,
-                timestamp: new Date().toISOString()
-            });
+            saveToHistory(request, response, responseTime);
 
         } catch (error) {
             statusElement.textContent = 'Error';
@@ -238,17 +355,6 @@ document.addEventListener('DOMContentLoaded', () => {
             responseData.textContent = error.message;
         }
     });
-
-    // History management
-    function saveToHistory(request) {
-        chrome.storage.local.get(['history'], (result) => {
-            const history = result.history || [];
-            history.unshift(request);
-            // Keep only last 50 requests
-            if (history.length > 50) history.pop();
-            chrome.storage.local.set({ history });
-        });
-    }
 
     // JWT Decoder
     function decodeJWT(token) {

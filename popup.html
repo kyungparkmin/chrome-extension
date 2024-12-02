@@ -25,6 +25,7 @@
                 <button class="tab-button active" data-tab="params">Params</button>
                 <button class="tab-button" data-tab="headers">Headers</button>
                 <button class="tab-button" data-tab="body">Body</button>
+                <button class="tab-button" data-tab="history">History</button>
             </div>
 
             <div class="tab-content">
@@ -50,6 +51,15 @@
 
                 <div id="body" class="tab-pane">
                     <textarea id="request-body" placeholder="Enter request body (JSON)"></textarea>
+                </div>
+
+                <div id="history" class="tab-pane">
+                    <div class="history-container">
+                        <div class="history-actions">
+                            <button id="clear-history">Clear History</button>
+                        </div>
+                        <div class="history-list"></div>
+                    </div>
                 </div>
             </div>
         </div>

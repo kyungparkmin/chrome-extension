@@ -5,6 +5,7 @@
   "description": "Simple REST API testing tool in your browser",
   "permissions": [
     "storage",
+    "alarms",
     "activeTab"
   ],
   "host_permissions": [
