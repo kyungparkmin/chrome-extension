@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const history = result.requestHistory || [];
             historyList.innerHTML = '';
             
-            history.forEach((item) => {
+            history.forEach((item, index) => {
                 const historyItem = document.createElement('div');
                 historyItem.className = 'history-item';
                 
@@ -184,25 +184,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 const timeString = time.toLocaleString();
                 
                 historyItem.innerHTML = `
-                    <div class="history-item-header">
-                        <span class="history-method ${item.method.toLowerCase()}">${item.method}</span>
-                        <span class="history-time">${timeString}</span>
+                    <div class="history-item-content">
+                        <div class="history-item-header">
+                            <span class="history-method ${item.method.toLowerCase()}">${item.method}</span>
+                            <span class="history-time">${timeString}</span>
+                        </div>
+                        <div class="history-url">${item.url}</div>
+                        <div class="history-status ${item.status >= 200 && item.status < 300 ? 'success' : 'error'}">
+                            Status: ${item.status} (${item.responseTime}ms)
+                        </div>
                     </div>
-                    <div class="history-url">${item.url}</div>
-                    <div class="history-status ${item.status >= 200 && item.status < 300 ? 'success' : 'error'}">
-                        Status: ${item.status} (${item.responseTime}ms)
-                    </div>
+                    <button class="delete-history-item" title="Delete this item">×</button>
                 `;
                 
-                // Click event to restore request
-                historyItem.addEventListener('click', () => {
+                // 히스토리 항목 클릭 시 요청 복원
+                const content = historyItem.querySelector('.history-item-content');
+                content.addEventListener('click', () => {
                     restoreRequest(item);
                 });
                 
-                historyList.insertBefore(historyItem, historyList.firstChild);
+                // 삭제 버튼 클릭 시 해당 항목만 삭제
+                const deleteBtn = historyItem.querySelector('.delete-history-item');
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // 부모 요소의 클릭 이벤트 방지
+                    if (confirm('이 히스토리 항목을 삭제하시겠습니까?')) {
+                        deleteHistoryItem(index);
+                    }
+                });
+                
+                historyList.appendChild(historyItem);
             });
         });
     }
+
+    // 단일 히스토리 항목 삭제
+    function deleteHistoryItem(index) {
+        chrome.storage.local.get(['requestHistory'], (result) => {
+            const history = result.requestHistory || [];
+            history.splice(index, 1); // 해당 인덱스의 항목만 삭제
+            chrome.storage.local.set({ requestHistory: history }, () => {
+                loadHistory(); // 히스토리 목록 새로고침
+            });
+        });
+    }
+
+    // Clear all history
+    clearHistoryBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to clear all history?')) {
+            chrome.storage.local.set({ requestHistory: [] }, () => {
+                loadHistory();
+            });
+        }
+    });
 
     // Save request to history
     function saveToHistory(request, response, responseTime) {
@@ -269,15 +302,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Save restored state
         saveState();
     }
-
-    // Clear history
-    clearHistoryBtn.addEventListener('click', () => {
-        if (confirm('Are you sure you want to clear all request history?')) {
-            chrome.storage.local.set({ requestHistory: [] }, () => {
-                loadHistory();
-            });
-        }
-    });
 
     // Load history on startup
     loadHistory();
