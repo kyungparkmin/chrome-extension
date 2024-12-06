@@ -70,14 +70,18 @@ body {
     border: 1px solid #ddd;
     padding: 15px;
     border-radius: 0 4px 4px 4px;
+    max-height: 300px;
+    overflow: hidden;
 }
 
 .tab-pane {
     display: none;
+    height: 100%;
 }
 
 .tab-pane.active {
     display: block;
+    height: 100%;
 }
 
 .param-row, .header-row {
@@ -184,8 +188,11 @@ body {
 }
 
 .history-list {
-    flex-grow: 1;
+    height: 200px;
     overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
 }
 
 .history-item {
